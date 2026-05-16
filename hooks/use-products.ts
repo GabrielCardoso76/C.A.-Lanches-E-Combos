@@ -7,10 +7,11 @@ import type { MenuItem } from "@/components/cart-context"
 
 export function useProducts() {
   const [products, setProducts] = useState<MenuItem[]>([])
+  const [storeOpen, setStoreOpen] = useState(true)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function fetchProducts() {
+    async function fetchData() {
       if (!supabase) {
         console.warn("Supabase credentials missing. Falling back to local mock data.")
         setProducts(menuData)
@@ -19,29 +20,34 @@ export function useProducts() {
       }
 
       try {
-        const { data, error } = await supabase.from("products").select("*").order("category", { ascending: true })
+        // Fetch products
+        const { data: prodData, error: prodError } = await supabase.from("products").select("*").order("category", { ascending: true })
 
-        if (error) {
-          console.error("Error fetching products:", error)
+        if (prodError) {
+          console.error("Error fetching products:", prodError)
           setProducts(menuData)
-        } else if (data && data.length > 0) {
-          // Map DB columns to our MenuItem interface if needed.
-          // Assuming DB columns: id, name, description, price, image, images, category, featured, best_seller
-          setProducts(data as MenuItem[])
+        } else if (prodData && prodData.length > 0) {
+          setProducts(prodData as MenuItem[])
         } else {
-          // If no data yet, fallback to mock data so UI doesn't look empty
           setProducts(menuData)
         }
+
+        // Fetch settings
+        const { data: settingsData } = await supabase.from("settings").select("is_open").eq("id", 1).single()
+        if (settingsData) {
+          setStoreOpen(settingsData.is_open)
+        }
+
       } catch (err) {
-        console.error("Unexpected error fetching products:", err)
+        console.error("Unexpected error fetching data:", err)
         setProducts(menuData)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchProducts()
+    fetchData()
   }, [])
 
-  return { products, loading }
+  return { products, storeOpen, loading }
 }

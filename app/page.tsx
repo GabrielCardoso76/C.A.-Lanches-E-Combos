@@ -17,7 +17,7 @@ function MenuContent() {
   const [activeCategory, setActiveCategory] = useState(categories[0].id)
   const [cartOpen, setCartOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<MenuItem | null>(null)
-  const { products, loading } = useProducts()
+  const { products, storeOpen, loading } = useProducts()
 
   function handleSelectCategory(id: string) {
     setActiveCategory(id)
@@ -55,7 +55,7 @@ function MenuContent() {
 
   return (
     <div className="min-h-screen pb-20">
-      <HeroBanner />
+      <HeroBanner isOpen={storeOpen} />
       <CategoryTabs activeCategory={activeCategory} onSelect={handleSelectCategory} />
 
       <main className="mx-auto max-w-4xl flex flex-col gap-8 py-6 px-4">
