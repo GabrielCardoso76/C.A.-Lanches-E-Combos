@@ -18,7 +18,9 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     let message = "Olá! Gostaria de fazer o seguinte pedido:\n\n"
 
     items.forEach((item, index) => {
-      message += `${index + 1}. *${item.name}* x${item.quantity} — R$ ${(item.price * item.quantity).toFixed(2).replace(".", ",")}\n`
+      // Trim name so WhatsApp bold formatting (*word*) doesn't break due to leading/trailing spaces
+      const itemName = item.name.trim()
+      message += `${index + 1}. *${itemName}* x${item.quantity} — R$ ${(item.price * item.quantity).toFixed(2).replace(".", ",")}\n`
     })
 
     message += `\n*Total: R$ ${totalPrice.toFixed(2).replace(".", ",")}*`

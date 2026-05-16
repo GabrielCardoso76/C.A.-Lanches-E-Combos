@@ -15,11 +15,13 @@ export function ProductModal({ item, isOpen, onClose }: ProductModalProps) {
   const { addItem } = useCart()
   const [quantity, setQuantity] = useState(1)
 
+  // Safe default values for hooks before early return
+  const images = item?.images && item.images.length > 0 ? item.images : (item ? [item.image] : [""])
+  const [currentImage, setCurrentImage] = useState(images[0])
+
   if (!isOpen || !item) return null
 
   const isAvailable = item.available !== false
-  const images = item.images && item.images.length > 0 ? item.images : [item.image]
-  const [currentImage, setCurrentImage] = useState(images[0])
 
   const handleAddToCart = () => {
     if (!isAvailable) return

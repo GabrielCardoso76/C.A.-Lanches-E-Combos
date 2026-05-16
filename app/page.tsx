@@ -91,11 +91,13 @@ function MenuContent() {
 
       <BottomBar onOpenCart={() => setCartOpen(true)} />
       <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
-      <ProductModal
-        item={selectedProduct}
-        isOpen={!!selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-      />
+      {!!selectedProduct && (
+        <ProductModal
+          item={selectedProduct}
+          isOpen={true}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
     </div>
   )
 }
