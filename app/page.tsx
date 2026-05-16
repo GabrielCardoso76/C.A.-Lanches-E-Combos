@@ -10,10 +10,13 @@ import { CartDrawer } from "@/components/cart-drawer"
 import { categories } from "@/lib/menu-data"
 import { useProducts } from "@/hooks/use-products"
 import { MenuItemCard } from "@/components/menu-item-card"
+import { ProductModal } from "@/components/product-modal"
+import type { MenuItem } from "@/components/cart-context"
 
 function MenuContent() {
   const [activeCategory, setActiveCategory] = useState(categories[0].id)
   const [cartOpen, setCartOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<MenuItem | null>(null)
   const { products, loading } = useProducts()
 
   function handleSelectCategory(id: string) {
@@ -55,13 +58,13 @@ function MenuContent() {
       <HeroBanner />
       <CategoryTabs activeCategory={activeCategory} onSelect={handleSelectCategory} />
 
-      <main className="mx-auto max-w-lg flex flex-col gap-6 py-4 px-4">
+      <main className="mx-auto max-w-4xl flex flex-col gap-8 py-6 px-4">
         {featuredProducts.length > 0 && (
           <section id="section-destaques" className="scroll-mt-32">
-            <h2 className="mb-4 text-xl font-black text-foreground">Destaques</h2>
-            <div className="flex flex-col gap-3">
+            <h2 className="mb-4 text-2xl font-black text-foreground border-b pb-2">Destaques</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {featuredProducts.map(item => (
-                <MenuItemCard key={item.id} item={item} />
+                <MenuItemCard key={item.id} item={item} onClick={setSelectedProduct} />
               ))}
             </div>
           </section>
@@ -73,12 +76,12 @@ function MenuContent() {
 
           return (
             <section key={cat.id} id={`section-${cat.id}`} className="scroll-mt-32">
-              <h2 className="mb-4 text-xl font-black text-foreground">
+              <h2 className="mb-4 text-2xl font-black text-foreground border-b pb-2">
                 {cat.label} {cat.emoji}
               </h2>
-              <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {catProducts.map((item) => (
-                  <MenuItemCard key={item.id} item={item} />
+                  <MenuItemCard key={item.id} item={item} onClick={setSelectedProduct} />
                 ))}
               </div>
             </section>
@@ -88,6 +91,11 @@ function MenuContent() {
 
       <BottomBar onOpenCart={() => setCartOpen(true)} />
       <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
+      <ProductModal
+        item={selectedProduct}
+        isOpen={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+      />
     </div>
   )
 }

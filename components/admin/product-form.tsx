@@ -21,6 +21,7 @@ export function ProductForm({ initialData, onCancel, onSaved }: ProductFormProps
     images: initialData?.images?.length ? [...initialData.images] : (initialData?.image ? [initialData.image] : [""]),
     featured: initialData?.featured || false,
     best_seller: initialData?.best_seller || false,
+    available: initialData?.available !== false, // defaults to true unless explicitly false
   })
 
   const [loading, setLoading] = useState(false)
@@ -81,7 +82,8 @@ export function ProductForm({ initialData, onCancel, onSaved }: ProductFormProps
       images: cleanImages,
       image: cleanImages[0], // fallback for old field
       featured: formData.featured,
-      best_seller: formData.best_seller
+      best_seller: formData.best_seller,
+      available: formData.available,
     }
 
     try {
@@ -211,7 +213,18 @@ export function ProductForm({ initialData, onCancel, onSaved }: ProductFormProps
         )}
       </div>
 
-      <div className="flex gap-6 py-2 border-y border-border">
+      <div className="flex flex-wrap gap-6 py-4 border-y border-border mt-4">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            name="available"
+            checked={formData.available}
+            onChange={handleChange}
+            className="w-4 h-4 text-primary accent-primary"
+          />
+          <span className="text-sm font-bold text-foreground">Disponível</span>
+        </label>
+
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"

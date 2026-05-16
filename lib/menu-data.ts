@@ -1,6 +1,6 @@
 import type { MenuItem } from "@/components/cart-context"
 
-export const WHATSAPP_NUMBER = "5500000000000"
+export const WHATSAPP_NUMBER = "5516991761504"
 
 export const menuData: MenuItem[] = []
 

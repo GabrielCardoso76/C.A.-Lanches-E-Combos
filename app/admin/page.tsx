@@ -83,8 +83,11 @@ export default function AdminPage() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-bold text-foreground truncate">{product.name}</h3>
+                      {product.available === false && (
+                        <span className="bg-destructive/10 text-destructive text-[10px] px-1.5 py-0.5 rounded font-bold">Esgotado</span>
+                      )}
                       {product.featured && (
                         <span className="bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0.5 rounded font-bold">Destaque</span>
                       )}
