@@ -18,6 +18,7 @@ CREATE TABLE public.products (
   category TEXT NOT NULL,
   featured BOOLEAN DEFAULT FALSE,
   best_seller BOOLEAN DEFAULT FALSE,
+  available BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

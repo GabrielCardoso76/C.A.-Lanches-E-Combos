@@ -12,6 +12,7 @@ export interface MenuItem {
   category: string
   featured?: boolean
   best_seller?: boolean
+  available?: boolean
 }
 
 export interface CartItem extends MenuItem {
