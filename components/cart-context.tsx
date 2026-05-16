@@ -7,8 +7,11 @@ export interface MenuItem {
   name: string
   description: string
   price: number
-  image: string
+  image: string // Kept for backward compatibility, will be replaced by images[0] or first available image
+  images?: string[] // up to 4 images
   category: string
+  featured?: boolean
+  best_seller?: boolean
 }
 
 export interface CartItem extends MenuItem {

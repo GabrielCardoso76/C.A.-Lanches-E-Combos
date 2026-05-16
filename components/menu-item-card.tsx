@@ -13,11 +13,18 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
   const cartItem = items.find((i) => i.id === item.id)
   const quantity = cartItem?.quantity ?? 0
 
+  const imageUrl = item.images && item.images.length > 0 ? item.images[0] : item.image
+
   return (
-    <div className="flex gap-3 rounded-xl border border-border bg-card p-3 shadow-sm transition-shadow hover:shadow-md">
+    <div className="flex gap-3 rounded-xl border border-border bg-card p-3 shadow-sm transition-shadow hover:shadow-md relative">
       <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg">
+        {item.best_seller && (
+          <div className="absolute top-0 left-0 z-10 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-br-lg shadow-sm">
+            Mais Vendido
+          </div>
+        )}
         <Image
-          src={item.image}
+          src={imageUrl}
           alt={item.name}
           fill
           className="object-cover"
