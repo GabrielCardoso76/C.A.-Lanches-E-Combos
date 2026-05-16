@@ -7,10 +7,11 @@ import { WHATSAPP_NUMBER } from "@/lib/menu-data"
 interface CartDrawerProps {
   isOpen: boolean
   onClose: () => void
+  storeOpen?: boolean
 }
 
-export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
-  const { items, updateQuantity, removeItem, clearCart, totalPrice } = useCart()
+export function CartDrawer({ isOpen, onClose, storeOpen = true }: CartDrawerProps) {
+  const { items, updateQuantity, updateObservations, removeItem, clearCart, totalPrice } = useCart()
 
   function sendToWhatsApp() {
     if (items.length === 0) return
@@ -21,6 +22,9 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
       // Trim name so WhatsApp bold formatting (*word*) doesn't break due to leading/trailing spaces
       const itemName = item.name.trim()
       message += `${index + 1}. *${itemName}* x${item.quantity} — R$ ${(item.price * item.quantity).toFixed(2).replace(".", ",")}\n`
+      if (item.observations && item.observations.trim().length > 0) {
+        message += `   _Obs: ${item.observations.trim()}_\n`
+      }
     })
 
     message += `\n*Total: R$ ${totalPrice.toFixed(2).replace(".", ",")}*`
@@ -81,44 +85,57 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center gap-3 rounded-lg border border-border bg-background p-3"
+                  className="flex flex-col gap-2 rounded-lg border border-border bg-background p-3 shadow-sm"
                 >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-card-foreground truncate">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      R$ {item.price.toFixed(2).replace(".", ",")} un.
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-card-foreground truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        R$ {item.price.toFixed(2).replace(".", ",")} un.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        className="flex h-7 w-7 items-center justify-center rounded-full border border-primary text-primary transition-transform active:scale-90"
+                        aria-label={`Diminuir ${item.name}`}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="w-5 text-center text-sm font-bold text-card-foreground">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-90"
+                        aria-label={`Aumentar ${item.name}`}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-sm font-bold text-primary">
+                        R$ {(item.price * item.quantity).toFixed(2).replace(".", ",")}
+                      </span>
+                      <button
+                        onClick={() => removeItem(item.id)}
+                        className="text-destructive transition-colors hover:text-destructive/80"
+                        aria-label={`Remover ${item.name}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full border border-primary text-primary"
-                      aria-label={`Diminuir ${item.name}`}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </button>
-                    <span className="w-5 text-center text-sm font-bold text-card-foreground">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground"
-                      aria-label={`Aumentar ${item.name}`}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-sm font-bold text-primary">
-                      R$ {(item.price * item.quantity).toFixed(2).replace(".", ",")}
-                    </span>
-                    <button
-                      onClick={() => removeItem(item.id)}
-                      className="text-destructive transition-colors hover:text-destructive/80"
-                      aria-label={`Remover ${item.name}`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+
+                  {/* Observations Field */}
+                  <div className="mt-1">
+                    <input
+                      type="text"
+                      placeholder="Alguma observação? (ex: sem cebola)"
+                      value={item.observations || ""}
+                      onChange={(e) => updateObservations(item.id, e.target.value)}
+                      className="w-full text-xs rounded-md border border-input bg-muted/50 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-colors placeholder:text-muted-foreground/60"
+                    />
                   </div>
                 </div>
               ))}
@@ -143,15 +160,24 @@ export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 R$ {totalPrice.toFixed(2).replace(".", ",")}
               </span>
             </div>
-            <button
-              onClick={sendToWhatsApp}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3.5 text-sm font-bold text-card shadow-lg transition-transform active:scale-[0.98]"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-              </svg>
-              Continuar pelo WhatsApp
-            </button>
+            {storeOpen ? (
+              <button
+                onClick={sendToWhatsApp}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3.5 text-sm font-bold text-card shadow-lg transition-transform active:scale-[0.98]"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                </svg>
+                Continuar pelo WhatsApp
+              </button>
+            ) : (
+              <button
+                disabled
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-muted text-muted-foreground py-3.5 text-sm font-bold shadow-none cursor-not-allowed"
+              >
+                Loja Fechada no momento
+              </button>
+            )}
           </div>
         )}
       </div>

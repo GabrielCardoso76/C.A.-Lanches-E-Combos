@@ -55,6 +55,11 @@ function MenuContent() {
 
   return (
     <div className="min-h-screen pb-20">
+      {!storeOpen && !loading && (
+        <div className="bg-destructive text-destructive-foreground text-center py-2 px-4 font-bold sticky top-0 z-50 shadow-md">
+          A loja está fechada no momento. Você não poderá finalizar o pedido.
+        </div>
+      )}
       <HeroBanner isOpen={storeOpen} />
       <CategoryTabs activeCategory={activeCategory} onSelect={handleSelectCategory} />
 
@@ -90,7 +95,7 @@ function MenuContent() {
       </main>
 
       <BottomBar onOpenCart={() => setCartOpen(true)} />
-      <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
+      <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} storeOpen={storeOpen} />
       {!!selectedProduct && (
         <ProductModal
           item={selectedProduct}
