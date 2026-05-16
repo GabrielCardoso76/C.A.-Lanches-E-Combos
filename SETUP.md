@@ -5,39 +5,13 @@ Este projeto é um cardápio digital (front-end e back-end) integrado ao Supabas
 ## 1. Configurando o Supabase
 
 1. Crie uma conta no [Supabase](https://supabase.com/) e inicie um novo projeto.
-2. No painel do projeto (Dashboard), vá em **SQL Editor** e execute o script abaixo para criar a tabela de produtos:
+2. No painel do projeto (Dashboard), vá em **SQL Editor** e execute os scripts localizados na pasta `supabase/migrations/` em ordem sequencial:
+   - Primeiro rode `001-initial-schema.sql` para criar a tabela básica.
+   - Depois rode `002-add-available-column.sql` para atualizar com a funcionalidade de desativar produtos.
 
-```sql
-CREATE TABLE public.products (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT,
-  price NUMERIC(10, 2) NOT NULL,
-  image TEXT NOT NULL,
-  images TEXT[] DEFAULT '{}',
-  category TEXT NOT NULL,
-  featured BOOLEAN DEFAULT FALSE,
-  best_seller BOOLEAN DEFAULT FALSE,
-  available BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+> **Dica de versionamento:** Manter arquivos separados na pasta `migrations` permite que, ao adicionar novas funcionalidades no futuro, você saiba exatamente o que rodar para atualizar o banco sem perder os dados já existentes.
 
--- Habilitar RLS (Row Level Security) mas permitir leitura pública e gravação anônima (para facilitar, ou configure roles)
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Permitir leitura para todos" ON public.products
-  FOR SELECT USING (true);
-
--- Atenção: Permitindo inserção/atualização pública apenas para facilitar este setup inicial.
--- Recomenda-se adicionar autenticação real do Supabase antes de ir para produção de verdade.
-CREATE POLICY "Permitir inserção anônima" ON public.products
-  FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "Permitir atualização anônima" ON public.products
-  FOR UPDATE USING (true);
-```
-
-3. Adicione alguns produtos de teste direto na tabela via painel do Supabase se desejar.
+3. (Opcional) Adicione produtos pelo painel do Supabase, ou diretamente no painel de administrador do app.
 4. Vá em **Project Settings -> API** e copie os valores:
    - **Project URL**
    - **Project API Keys (anon / public)**
