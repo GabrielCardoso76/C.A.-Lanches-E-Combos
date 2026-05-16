@@ -8,6 +8,8 @@ Este projeto é um cardápio digital (front-end e back-end) integrado ao Supabas
 2. No painel do projeto (Dashboard), vá em **SQL Editor** e execute os scripts localizados na pasta `supabase/migrations/` em ordem sequencial:
    - Primeiro rode `001-initial-schema.sql` para criar a tabela básica.
    - Depois rode `002-add-available-column.sql` para atualizar com a funcionalidade de desativar produtos.
+   - Rode `003-store-settings-neighborhoods-orders.sql` para adicionar as tabelas secundárias.
+   - Rode `004-add-delete-policy-to-products.sql` para permitir a deleção de produtos pelo painel admin.
 
 > **Dica de versionamento:** Manter arquivos separados na pasta `migrations` permite que, ao adicionar novas funcionalidades no futuro, você saiba exatamente o que rodar para atualizar o banco sem perder os dados já existentes.
 
