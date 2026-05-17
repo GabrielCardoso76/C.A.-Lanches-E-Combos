@@ -139,7 +139,7 @@ export function ProductModal({ item, isOpen, onClose }: ProductModalProps) {
                 className="flex-1 bg-primary text-primary-foreground h-12 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors shadow-sm active:scale-95"
               >
                 <ShoppingBag size={20} />
-                <span>Adicionar • R$ {(item.price * quantity).toFixed(2).replace(".", ",")}</span>
+                <span>Adicionar</span>
               </button>
             </div>
           ) : (

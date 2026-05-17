@@ -34,7 +34,7 @@ export default function LoginPage() {
       setError("E-mail ou senha incorretos.")
       setLoading(false)
     } else {
-      router.push("/profile")
+      router.push("/")
     }
   }
 
