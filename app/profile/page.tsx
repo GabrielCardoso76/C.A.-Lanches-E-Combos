@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { LogOut, Home, KeyRound, Plus, Trash2, MapPin, ArrowLeft, Eye, EyeOff } from "lucide-react"
+import { LogOut, Home, KeyRound, Plus, Trash2, MapPin, ArrowLeft, Eye, EyeOff, ShoppingBag, Clock } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface Neighborhood {
