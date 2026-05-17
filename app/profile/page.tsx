@@ -42,6 +42,10 @@ export default function ProfilePage() {
   })
   const [fetchingCep, setFetchingCep] = useState(false)
 
+  // Orders History
+  const [orders, setOrders] = useState<any[]>([])
+  const [activeTab, setActiveTab] = useState<"dados" | "pedidos">("dados")
+
   useEffect(() => {
     async function getUser() {
       if (!supabase) return setLoading(false)
@@ -73,6 +77,16 @@ export default function ProfilePage() {
           setAddressForm(prev => ({ ...prev, neighborhood_id: neighData[0].id }))
         }
       }
+
+      // Fetch Orders
+      const { data: ordersData } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("profile_id", user.id)
+        .neq("status", "cancelado")
+        .order("created_at", { ascending: false })
+
+      if (ordersData) setOrders(ordersData)
 
       setLoading(false)
     }
@@ -213,8 +227,31 @@ export default function ProfilePage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* User Info */}
-        <section className="bg-card border border-border p-6 rounded-2xl shadow-sm">
+
+        {/* Tabs */}
+        <div className="flex bg-muted/50 p-1 rounded-xl w-full max-w-md mx-auto border border-border/50">
+          <button
+            onClick={() => setActiveTab("dados")}
+            className={`flex-1 py-2 px-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+              activeTab === "dados" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Home size={16} /> Meus Dados
+          </button>
+          <button
+            onClick={() => setActiveTab("pedidos")}
+            className={`flex-1 py-2 px-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+              activeTab === "pedidos" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <ShoppingBag size={16} /> Meus Pedidos
+          </button>
+        </div>
+
+        {activeTab === "dados" ? (
+          <div className="space-y-6">
+            {/* User Info */}
+            <section className="bg-card border border-border p-6 rounded-2xl shadow-sm">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center text-2xl font-black">
               {profile?.full_name?.charAt(0).toUpperCase() || "U"}
@@ -345,7 +382,64 @@ export default function ProfilePage() {
               ))
             )}
           </div>
-        </section>
+            </section>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-black mb-4">Histórico de Pedidos</h2>
+            {orders.length === 0 ? (
+              <div className="bg-card border border-border p-8 rounded-2xl text-center shadow-sm">
+                <ShoppingBag size={48} className="mx-auto text-muted-foreground mb-4 opacity-50" />
+                <h3 className="text-xl font-bold">Nenhum pedido encontrado</h3>
+                <p className="text-muted-foreground mt-2">Você ainda não realizou nenhum pedido conosco.</p>
+                <Link href="/" className="inline-block mt-4 bg-primary text-primary-foreground font-bold px-6 py-2 rounded-lg">
+                  Fazer um pedido
+                </Link>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {orders.map((order) => (
+                  <div key={order.id} className="bg-card border border-border p-4 rounded-2xl shadow-sm flex flex-col gap-3">
+                    <div className="flex justify-between items-center border-b border-border pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-lg">#{order.order_number ? `P${order.order_number}` : order.id.slice(0,5).toUpperCase()}</span>
+                        <span className={`text-xs uppercase font-bold px-2 py-1 rounded-md ${
+                          order.status === "pendente" ? "bg-amber-100 text-amber-800 border border-amber-200" :
+                          order.status === "preparando" ? "bg-blue-100 text-blue-800 border border-blue-200" :
+                          "bg-green-100 text-green-800 border border-green-200"
+                        }`}>
+                          {order.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground font-medium">
+                        <Clock size={14} />
+                        {new Date(order.created_at).toLocaleDateString("pt-BR")} {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+
+                    <ul className="space-y-1 py-1">
+                      {order.items.map((item: any, idx: number) => (
+                        <li key={idx} className="flex gap-2 text-sm">
+                          <span className="font-black text-primary">{item.quantity}x</span>
+                          <span className="font-medium">{item.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="flex justify-between items-end border-t border-border pt-3 mt-1">
+                      <div className="text-sm text-muted-foreground">
+                        {order.delivery_address ? "Entrega" : "Retirada"} • <span className="capitalize">{order.payment_method}</span>
+                      </div>
+                      <div className="font-black text-lg">
+                        R$ {Number(order.total).toFixed(2).replace(".", ",")}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   )

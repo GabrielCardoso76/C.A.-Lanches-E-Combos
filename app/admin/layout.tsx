@@ -57,6 +57,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navLinks = [
     { href: "/admin/kitchen", label: "Cozinha (KDS)" },
+    { href: "/admin/financas", label: "Finanças" },
     { href: "/admin", label: "Produtos" },
     { href: "/admin/customers", label: "Clientes" },
     { href: "/admin/settings", label: "Configurações" },
