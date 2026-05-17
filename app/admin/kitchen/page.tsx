@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { supabase } from "@/lib/supabase"
-import { Clock, MapPin, DollarSign, CheckCircle2, ChefHat, AlertCircle, BellRing } from "lucide-react"
+import { Clock, MapPin, DollarSign, CheckCircle2, ChefHat, AlertCircle, BellRing, Edit2, Trash2, X } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 
 // Defines the structure matching our JSONB storage
@@ -24,19 +24,21 @@ interface DeliveryAddress {
 
 interface Order {
   id: string
+  order_number: number | null
   items: OrderItem[]
   total: number
   payment_method: string
   change_for: number | null
   delivery_fee: number
   delivery_address: DeliveryAddress | null
-  status: "pendente" | "preparando" | "concluido"
+  status: "pendente" | "preparando" | "concluido" | "cancelado"
   created_at: string
 }
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null)
 
   // Web Audio API context ref
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -56,7 +58,7 @@ export default function KitchenPage() {
     const { data, error } = await supabase
       .from("orders")
       .select("*")
-      .neq("status", "concluido")
+      .not("status", "in", '("concluido","cancelado")')
       .order("created_at", { ascending: true })
 
     if (data && !error) {
@@ -76,18 +78,35 @@ export default function KitchenPage() {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'orders',
         },
         (payload) => {
-          const newOrder = payload.new as Order
-          // Add the new order to the state
-          setOrders(prev => [...prev, newOrder].sort((a, b) =>
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          ))
-          // Play alert sound
-          playAlert()
+          if (payload.eventType === 'INSERT') {
+             const newOrder = payload.new as Order
+             if (newOrder.status !== "concluido" && newOrder.status !== "cancelado") {
+               setOrders(prev => [...prev, newOrder].sort((a, b) =>
+                 new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+               ))
+               playAlert()
+             }
+          } else if (payload.eventType === 'UPDATE') {
+             const updatedOrder = payload.new as Order
+             setOrders(prev => {
+                if (updatedOrder.status === "concluido" || updatedOrder.status === "cancelado") {
+                  return prev.filter(o => o.id !== updatedOrder.id)
+                }
+                const exists = prev.find(o => o.id === updatedOrder.id)
+                if (exists) {
+                   return prev.map(o => o.id === updatedOrder.id ? updatedOrder : o)
+                } else {
+                   return [...prev, updatedOrder].sort((a, b) =>
+                     new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                   )
+                }
+             })
+          }
         }
       )
       .subscribe()
@@ -97,18 +116,33 @@ export default function KitchenPage() {
     }
   }, [])
 
-  const updateOrderStatus = async (orderId: string, newStatus: "preparando" | "concluido") => {
+  const updateOrderStatus = async (orderId: string, newStatus: "preparando" | "concluido" | "cancelado") => {
     if (!supabase) return
 
     // Optimistic update
     setOrders(prev => {
-      if (newStatus === "concluido") {
+      if (newStatus === "concluido" || newStatus === "cancelado") {
         return prev.filter(o => o.id !== orderId)
       }
       return prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
     })
 
     await supabase.from("orders").update({ status: newStatus }).eq("id", orderId)
+  }
+
+  const saveOrderEdits = async () => {
+    if (!supabase || !editingOrder) return
+
+    // Optimistic update
+    setOrders(prev => prev.map(o => o.id === editingOrder.id ? editingOrder : o))
+
+    await supabase.from("orders").update({
+      items: editingOrder.items,
+      total: editingOrder.total,
+      delivery_fee: editingOrder.delivery_fee,
+    }).eq("id", editingOrder.id)
+
+    setEditingOrder(null)
   }
 
   // Play sound function wrapper using Web Audio API
@@ -191,7 +225,7 @@ export default function KitchenPage() {
                 }`}>
                   <div className="flex items-center gap-2">
                     <span className="font-black text-lg">
-                      #{order.id.slice(0, 5).toUpperCase()}
+                      #{order.order_number ? `P${order.order_number}` : order.id.slice(0, 5).toUpperCase()}
                     </span>
                     <span className={`text-[10px] uppercase font-black px-2 py-1 rounded-md ${
                       order.status === "pendente" ? "bg-amber-500 text-white" : "bg-blue-500 text-white"
@@ -199,9 +233,29 @@ export default function KitchenPage() {
                       {order.status}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 text-sm font-bold text-muted-foreground">
-                    <Clock size={14} />
-                    {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 text-sm font-bold text-muted-foreground">
+                      <Clock size={14} />
+                      {new Date(order.created_at).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <button
+                      onClick={() => setEditingOrder(order)}
+                      className="p-1.5 text-muted-foreground hover:text-primary bg-background border border-border rounded-md transition-colors"
+                      title="Editar Pedido"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm("Tem certeza que deseja cancelar e excluir este pedido? Ele sumirá do histórico do cliente.")) {
+                          updateOrderStatus(order.id, "cancelado")
+                        }
+                      }}
+                      className="p-1.5 text-muted-foreground hover:text-destructive bg-background border border-border rounded-md transition-colors"
+                      title="Excluir Pedido"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
 
@@ -280,6 +334,105 @@ export default function KitchenPage() {
           </div>
         )}
       </main>
+
+      {/* Edit Order Modal */}
+      {editingOrder && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex justify-center items-center p-4">
+          <div className="bg-card w-full max-w-md rounded-2xl shadow-2xl border border-border overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-4 border-b border-border flex justify-between items-center bg-muted/30">
+              <h2 className="font-black text-lg">
+                Editar Pedido #{editingOrder.order_number ? `P${editingOrder.order_number}` : editingOrder.id.slice(0, 5).toUpperCase()}
+              </h2>
+              <button onClick={() => setEditingOrder(null)} className="p-2 hover:bg-muted rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto flex-1 space-y-4">
+              <div>
+                <h3 className="font-bold mb-2">Itens do Pedido</h3>
+                <div className="space-y-3">
+                  {editingOrder.items.map((item, idx) => (
+                    <div key={idx} className="flex gap-2 items-center bg-muted/20 p-2 rounded-lg border border-border">
+                      <div className="flex-1">
+                        <div className="font-bold text-sm">{item.name}</div>
+                        <div className="text-xs text-muted-foreground">R$ {item.price.toFixed(2).replace('.', ',')} cada</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const newQty = parseInt(e.target.value) || 0
+                            const newItems = [...editingOrder.items]
+                            if (newQty === 0) {
+                              newItems.splice(idx, 1)
+                            } else {
+                              newItems[idx].quantity = newQty
+                            }
+
+                            // Recalculate total
+                            const newItemsTotal = newItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0)
+                            const newTotal = newItemsTotal + editingOrder.delivery_fee
+
+                            setEditingOrder({...editingOrder, items: newItems, total: newTotal})
+                          }}
+                          className="w-16 border border-input bg-background rounded-md p-1 text-center font-bold"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground mb-1">Taxa de Entrega (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editingOrder.delivery_fee}
+                    onChange={(e) => {
+                      const newFee = parseFloat(e.target.value) || 0
+                      const itemsTotal = editingOrder.items.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0)
+                      setEditingOrder({...editingOrder, delivery_fee: newFee, total: itemsTotal + newFee})
+                    }}
+                    className="w-full border border-input bg-background rounded-md p-2 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground mb-1">Total do Pedido (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editingOrder.total}
+                    onChange={(e) => {
+                      setEditingOrder({...editingOrder, total: parseFloat(e.target.value) || 0})
+                    }}
+                    className="w-full border border-input bg-background rounded-md p-2 font-black text-primary"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border bg-muted/30 flex gap-3">
+              <button
+                onClick={() => setEditingOrder(null)}
+                className="flex-1 py-2 font-bold bg-background border border-border rounded-lg hover:bg-muted transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveOrderEdits}
+                className="flex-1 py-2 font-bold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

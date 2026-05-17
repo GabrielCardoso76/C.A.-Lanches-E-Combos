@@ -100,6 +100,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
     const parsedChangeFor = changeFor ? parseFloat(changeFor.replace(",", ".")) : null
 
     // 1. Save to database
+    let orderNumberDisplay = ""
     if (supabase) {
       const orderData = {
         profile_id: user?.id || null,
@@ -118,17 +119,20 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
         status: "pendente"
       }
 
-      const { error } = await supabase.from("orders").insert([orderData])
+      const { data, error } = await supabase.from("orders").insert([orderData]).select('order_number').single()
       if (error) {
         console.error("Error saving order:", error)
         alert("Houve um erro ao registrar seu pedido. Tente novamente.")
         setLoading(false)
         return
       }
+      if (data && data.order_number) {
+        orderNumberDisplay = `#P${data.order_number}`
+      }
     }
 
     // 2. Generate WhatsApp Message
-    let message = "Olá! Gostaria de fazer o seguinte pedido:\n\n"
+    let message = `Olá! Gostaria de fazer o seguinte pedido${orderNumberDisplay ? ` (*${orderNumberDisplay}*)` : ''}:\n\n`
 
     items.forEach((item, index) => {
       const itemName = item.name.trim()
