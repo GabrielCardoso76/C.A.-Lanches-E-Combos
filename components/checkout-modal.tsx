@@ -20,6 +20,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
 
   // Settings
   const [estimatedTime, setEstimatedTime] = useState("30 a 45 min")
+  const [isOpenStore, setIsOpenStore] = useState<boolean>(true)
 
   // Checkout State
   const [deliveryMethod, setDeliveryMethod] = useState<"delivery" | "pickup" | null>(null)
@@ -42,9 +43,12 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
     async function fetchCheckoutData() {
       if (!supabase) return
 
-      // Fetch time
-      const { data: settings } = await supabase.from("settings").select("estimated_time").eq("id", 1).single()
-      if (settings) setEstimatedTime(settings.estimated_time)
+      // Fetch settings (time and open status)
+      const { data: settings } = await supabase.from("settings").select("estimated_time, is_open").eq("id", 1).single()
+      if (settings) {
+        setEstimatedTime(settings.estimated_time)
+        setIsOpenStore(settings.is_open)
+      }
 
       // Fetch user and addresses
       const { data: { user } } = await supabase.auth.getUser()
@@ -303,6 +307,13 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
           {/* Step 3: Confirmation */}
           {step === 3 && (
             <div className="space-y-6 animate-in slide-in-from-right-4">
+              {!isOpenStore && (
+                <div className="text-center bg-destructive/10 text-destructive p-4 rounded-xl border border-destructive/20 mb-4 animate-pulse">
+                  <h3 className="font-black text-lg">A loja está fechada no momento!</h3>
+                  <p className="text-sm mt-1">Você não poderá concluir o pedido agora.</p>
+                </div>
+              )}
+
               <div className="text-center bg-green-500/10 text-green-700 p-4 rounded-xl border border-green-500/20">
                 <h3 className="font-black text-lg">Quase lá!</h3>
                 <p className="text-sm mt-1">Confira seu pedido antes de enviar para o WhatsApp.</p>
@@ -384,10 +395,10 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
               </button>
               <button
                 onClick={handleFinalize}
-                disabled={loading}
+                disabled={loading || !isOpenStore}
                 className="flex-1 bg-[#25D366] text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-[#20b958] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {loading ? "Enviando..." : "Confirmar e Enviar Pedido"}
+                {loading ? "Enviando..." : (isOpenStore ? "Confirmar e Enviar Pedido" : "Loja Fechada")}
               </button>
             </div>
           )}
