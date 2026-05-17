@@ -44,7 +44,7 @@ export default function RegisterPage() {
     }
 
     alert("Cadastro realizado com sucesso!")
-    router.push("/profile")
+    router.push("/")
   }
 
   return (
