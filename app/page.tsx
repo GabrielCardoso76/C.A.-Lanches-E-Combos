@@ -17,7 +17,7 @@ function MenuContent() {
   const [activeCategory, setActiveCategory] = useState(categories[0].id)
   const [cartOpen, setCartOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<MenuItem | null>(null)
-  const { products, storeOpen, loading } = useProducts()
+  const { products, storeOpen, nextOpenMessage, loading } = useProducts()
 
   function handleSelectCategory(id: string) {
     setActiveCategory(id)
@@ -57,7 +57,7 @@ function MenuContent() {
     <div className="min-h-screen pb-20">
       {!storeOpen && !loading && (
         <div className="bg-destructive text-destructive-foreground text-center py-2 px-4 font-bold sticky top-0 z-50 shadow-md">
-          A loja está fechada no momento. Você não poderá finalizar o pedido.
+          A loja está fechada. {nextOpenMessage}
         </div>
       )}
       <HeroBanner isOpen={storeOpen} />

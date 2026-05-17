@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import { Clock, MapPin, DollarSign, CheckCircle2, ChefHat, AlertCircle, BellRing } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // Defines the structure matching our JSONB storage
 interface OrderItem {
@@ -164,8 +165,10 @@ export default function KitchenPage() {
 
       <main className="p-4 md:p-6">
         {loading ? (
-          <div className="flex justify-center items-center h-[50vh]">
-            <p className="text-muted-foreground font-medium">Carregando pedidos...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <Skeleton key={i} className="h-64 w-full rounded-2xl" />
+            ))}
           </div>
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[50vh] text-center">

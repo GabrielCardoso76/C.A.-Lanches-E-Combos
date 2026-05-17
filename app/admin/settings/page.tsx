@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
-import { Plus, Pencil, Trash2, Save } from "lucide-react"
+import { Plus, Pencil, Trash2, Save, Clock } from "lucide-react"
+import { WeeklySchedule, DailySchedule } from "@/lib/business-hours"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface Neighborhood {
   id: string
@@ -10,9 +12,17 @@ interface Neighborhood {
   delivery_fee: number
 }
 
+const daysOfWeekStr = [
+  "Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira",
+  "Quinta-feira", "Sexta-feira", "Sábado"
+];
+
 export default function SettingsPage() {
   const [estimatedTime, setEstimatedTime] = useState("30 a 45 min")
   const [savingTime, setSavingTime] = useState(false)
+
+  const [schedule, setSchedule] = useState<WeeklySchedule>({})
+  const [savingSchedule, setSavingSchedule] = useState(false)
 
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([])
   const [loadingNeigborhoods, setLoadingNeighborhoods] = useState(true)
@@ -31,9 +41,12 @@ export default function SettingsPage() {
       }
 
       // Fetch settings
-      const { data: settingsData } = await supabase.from("settings").select("estimated_time").eq("id", 1).single()
+      const { data: settingsData } = await supabase.from("settings").select("estimated_time, schedule").eq("id", 1).single()
       if (settingsData) {
         setEstimatedTime(settingsData.estimated_time)
+        if (settingsData.schedule) {
+          setSchedule(settingsData.schedule)
+        }
       }
 
       // Fetch neighborhoods
@@ -53,6 +66,24 @@ export default function SettingsPage() {
     await supabase.from("settings").update({ estimated_time: estimatedTime }).eq("id", 1)
     setSavingTime(false)
     alert("Tempo estimado atualizado com sucesso!")
+  }
+
+  const handleScheduleChange = (dayIndex: string, field: keyof DailySchedule, value: any) => {
+    setSchedule(prev => ({
+      ...prev,
+      [dayIndex]: {
+        ...prev[dayIndex],
+        [field]: value
+      }
+    }))
+  }
+
+  const saveSchedule = async () => {
+    if (!supabase) return
+    setSavingSchedule(true)
+    await supabase.from("settings").update({ schedule }).eq("id", 1)
+    setSavingSchedule(false)
+    alert("Horários de funcionamento atualizados com sucesso!")
   }
 
   const handleSaveNeighborhood = async (e: React.FormEvent) => {
@@ -109,6 +140,75 @@ export default function SettingsPage() {
     <div className="pb-20">
       <main className="max-w-4xl mx-auto px-4 py-6 md:py-8">
         <h2 className="text-2xl font-black text-foreground mb-6">Configurações da Loja</h2>
+
+        {/* Business Hours Section */}
+        <section className="bg-card border border-border p-6 rounded-xl shadow-sm mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="text-primary" size={24} />
+            <h3 className="text-lg font-bold text-foreground">Horários de Funcionamento (Automático)</h3>
+          </div>
+
+          <div className="space-y-4 mb-6">
+            {daysOfWeekStr.map((day, index) => {
+              const daySchedule = schedule[index.toString()] || { isOpen: false, open: "18:00", close: "23:00" }
+
+              return (
+                <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-muted/30 border border-border rounded-lg">
+                  <div className="w-full sm:w-36 flex items-center justify-between sm:justify-start gap-2">
+                    <span className="font-bold text-sm">{day}</span>
+                    <label className="relative inline-flex items-center cursor-pointer sm:hidden">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={daySchedule.isOpen}
+                        onChange={(e) => handleScheduleChange(index.toString(), "isOpen", e.target.checked)}
+                      />
+                      <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                  </div>
+
+                  <div className="hidden sm:flex items-center gap-2">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={daySchedule.isOpen}
+                        onChange={(e) => handleScheduleChange(index.toString(), "isOpen", e.target.checked)}
+                      />
+                      <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                    <span className="text-xs text-muted-foreground w-12">{daySchedule.isOpen ? "Aberto" : "Fechado"}</span>
+                  </div>
+
+                  <div className={`flex items-center gap-2 flex-1 ${!daySchedule.isOpen && 'opacity-50 pointer-events-none'}`}>
+                    <input
+                      type="time"
+                      value={daySchedule.open}
+                      onChange={(e) => handleScheduleChange(index.toString(), "open", e.target.value)}
+                      className="border border-input rounded-md p-1.5 text-sm bg-background"
+                    />
+                    <span className="text-muted-foreground text-sm">até</span>
+                    <input
+                      type="time"
+                      value={daySchedule.close}
+                      onChange={(e) => handleScheduleChange(index.toString(), "close", e.target.value)}
+                      className="border border-input rounded-md p-1.5 text-sm bg-background"
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <button
+            onClick={saveSchedule}
+            disabled={savingSchedule}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-lg font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            <Save size={18} />
+            {savingSchedule ? "Salvando..." : "Salvar Horários"}
+          </button>
+        </section>
 
         {/* Estimated Time Section */}
         <section className="bg-card border border-border p-6 rounded-xl shadow-sm mb-8">
@@ -199,7 +299,11 @@ export default function SettingsPage() {
 
           <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
             {loadingNeigborhoods ? (
-              <div className="p-8 text-center text-muted-foreground">Carregando bairros...</div>
+              <div className="p-4 space-y-4">
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-12 w-full rounded-lg" />
+              </div>
             ) : neighborhoods.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">Nenhum bairro cadastrado ainda.</div>
             ) : (

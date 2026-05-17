@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { LogOut, Home, KeyRound, Plus, Trash2, MapPin, ArrowLeft } from "lucide-react"
+import { LogOut, Home, KeyRound, Plus, Trash2, MapPin, ArrowLeft, Eye, EyeOff } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface Neighborhood {
   id: string
@@ -29,6 +30,7 @@ export default function ProfilePage() {
 
   // Passwords
   const [newPassword, setNewPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
 
   // Addresses
@@ -36,8 +38,9 @@ export default function ProfilePage() {
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([])
   const [isAddingAddress, setIsAddingAddress] = useState(false)
   const [addressForm, setAddressForm] = useState({
-    street: "", number: "", complement: "", reference: "", neighborhood_id: ""
+    cep: "", street: "", number: "", complement: "", reference: "", neighborhood_id: ""
   })
+  const [fetchingCep, setFetchingCep] = useState(false)
 
   useEffect(() => {
     async function getUser() {
@@ -111,7 +114,7 @@ export default function ProfilePage() {
     if (!error && data) {
       setAddresses(prev => [...prev, data as any])
       setIsAddingAddress(false)
-      setAddressForm({ street: "", number: "", complement: "", reference: "", neighborhood_id: neighborhoods[0]?.id || "" })
+      setAddressForm({ cep: "", street: "", number: "", complement: "", reference: "", neighborhood_id: neighborhoods[0]?.id || "" })
     } else {
       alert("Erro ao salvar endereço.")
     }
@@ -125,8 +128,69 @@ export default function ProfilePage() {
     }
   }
 
+  const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    let cep = e.target.value.replace(/\D/g, "")
+    if (cep.length > 8) cep = cep.slice(0, 8)
+
+    setAddressForm(prev => ({ ...prev, cep }))
+
+    if (cep.length === 8) {
+      setFetchingCep(true)
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        const data = await res.json()
+
+        if (!data.erro) {
+          // Verify if it is São Carlos
+          if (data.localidade === "São Carlos") {
+            let n_id = ""
+            // Try to find the neighborhood
+            const foundNeighborhood = neighborhoods.find(n => n.name.toLowerCase() === data.bairro.toLowerCase())
+
+            if (foundNeighborhood) {
+              n_id = foundNeighborhood.id
+            } else if (supabase) {
+              // Create the neighborhood if it doesn't exist
+              const { data: newN, error: newNError } = await supabase
+                .from("neighborhoods")
+                .insert([{ name: data.bairro, delivery_fee: 0 }])
+                .select()
+                .single()
+
+              if (!newNError && newN) {
+                setNeighborhoods(prev => [...prev, newN].sort((a, b) => a.name.localeCompare(b.name)))
+                n_id = newN.id
+              }
+            }
+
+            setAddressForm(prev => ({
+              ...prev,
+              street: data.logradouro,
+              neighborhood_id: n_id || prev.neighborhood_id
+            }))
+          } else {
+            alert("Atualmente só entregamos em São Carlos - SP.")
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CEP", error)
+      } finally {
+        setFetchingCep(false)
+      }
+    }
+  }
+
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-muted/20">Carregando...</div>
+    return (
+      <div className="min-h-screen bg-muted/20 pb-20 p-4 pt-8">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <Skeleton className="h-16 w-full rounded-2xl" />
+          <Skeleton className="h-32 w-full rounded-2xl" />
+          <Skeleton className="h-48 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full rounded-2xl" />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -169,15 +233,24 @@ export default function ProfilePage() {
             <h3 className="text-lg font-bold">Alterar Senha</h3>
           </div>
           <form onSubmit={handleUpdatePassword} className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={newPassword}
-              onChange={e => setNewPassword(e.target.value)}
-              placeholder="Nova senha (mín. 6 caracteres)"
-              className="flex-1 border border-input rounded-lg p-2.5 bg-background focus:ring-2 focus:ring-primary outline-none"
-            />
+            <div className="relative flex-1">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={6}
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                placeholder="Nova senha (mín. 6 caracteres)"
+                className="w-full border border-input rounded-lg p-2.5 pr-10 bg-background focus:ring-2 focus:ring-primary outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             <button
               type="submit"
               disabled={savingPassword || newPassword.length < 6}
@@ -209,9 +282,21 @@ export default function ProfilePage() {
             <form onSubmit={handleSaveAddress} className="mb-6 bg-muted/30 p-4 rounded-xl border border-border">
               <h4 className="font-bold mb-3 text-sm">Novo Endereço</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-muted-foreground mb-1">Rua / Avenida *</label>
-                  <input required value={addressForm.street} onChange={e => setAddressForm({...addressForm, street: e.target.value})} type="text" className="w-full border border-input rounded-lg p-2 text-sm bg-background" />
+                <div className="sm:col-span-2 flex gap-3">
+                  <div className="w-1/3">
+                    <label className="block text-xs font-bold text-muted-foreground mb-1">CEP (Opcional)</label>
+                    <input
+                      value={addressForm.cep}
+                      onChange={handleCepChange}
+                      type="text"
+                      placeholder="00000-000"
+                      className={`w-full border ${fetchingCep ? 'border-primary ring-1 ring-primary' : 'border-input'} rounded-lg p-2 text-sm bg-background transition-colors`}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-bold text-muted-foreground mb-1">Rua / Avenida *</label>
+                    <input required value={addressForm.street} onChange={e => setAddressForm({...addressForm, street: e.target.value})} type="text" className="w-full border border-input rounded-lg p-2 text-sm bg-background" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-muted-foreground mb-1">Número *</label>
