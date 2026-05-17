@@ -36,14 +36,18 @@ interface Order {
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  // Request audio permission and setup audio element on mount
+  // Web Audio API context ref
+  const audioContextRef = useRef<AudioContext | null>(null)
+
+  // Initialize audio context
   useEffect(() => {
-    // Create audio element for the beep sound
-    // Using a simple data URI for a short generic beep sound to avoid needing external assets
-    const audio = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"+Array(100).join("a"))
-    audioRef.current = audio
+    if (typeof window !== "undefined" && !audioContextRef.current) {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+      if (AudioContext) {
+        audioContextRef.current = new AudioContext()
+      }
+    }
   }, [])
 
   const fetchOrders = async () => {
@@ -106,10 +110,32 @@ export default function KitchenPage() {
     await supabase.from("orders").update({ status: newStatus }).eq("id", orderId)
   }
 
-  // Play sound function wrapper
+  // Play sound function wrapper using Web Audio API
   const playAlert = () => {
-    if (audioRef.current) {
-      audioRef.current.play().catch(e => console.log("Áudio bloqueado pelo navegador até haver interação:", e))
+    if (!audioContextRef.current) return
+
+    // Resume context if suspended (common browser policy requirement)
+    if (audioContextRef.current.state === "suspended") {
+      audioContextRef.current.resume()
+    }
+
+    try {
+      const oscillator = audioContextRef.current.createOscillator()
+      const gainNode = audioContextRef.current.createGain()
+
+      oscillator.type = "sine"
+      oscillator.frequency.setValueAtTime(800, audioContextRef.current.currentTime) // 800Hz beep
+
+      gainNode.gain.setValueAtTime(0.1, audioContextRef.current.currentTime) // Initial volume
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContextRef.current.currentTime + 0.5) // Fade out
+
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContextRef.current.destination)
+
+      oscillator.start()
+      oscillator.stop(audioContextRef.current.currentTime + 0.5)
+    } catch (e) {
+      console.log("Erro ao tocar áudio ou bloqueado pelo navegador:", e)
     }
   }
 

@@ -35,4 +35,3 @@ CREATE POLICY "Usuarios podem ver proprios pedidos" ON public.orders
 -- restrita para o painel ler as orders e profiles:
 CREATE POLICY "Permitir leitura anonima de orders para KDS" ON public.orders FOR SELECT USING (true);
 CREATE POLICY "Permitir atualizacao anonima de orders para KDS" ON public.orders FOR UPDATE USING (true);
-CREATE POLICY "Permitir leitura de profiles para admin" ON public.profiles FOR SELECT USING (true);

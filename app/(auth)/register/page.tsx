@@ -41,22 +41,6 @@ export default function RegisterPage() {
       return
     }
 
-    // 2. Create Profile
-    if (authData.user) {
-      const { error: profileError } = await supabase.from("profiles").insert([
-        {
-          id: authData.user.id,
-          full_name: name,
-          email: email
-        }
-      ])
-
-      if (profileError) {
-        console.error("Profile creation error:", profileError)
-        // Non-blocking error for MVP, but good to log
-      }
-    }
-
     alert("Cadastro realizado com sucesso!")
     router.push("/profile")
   }

@@ -155,6 +155,14 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
 
     // 3. Clear cart and Redirect
     clearCart()
+
+    // Explicitly clean any potential storage that might be used by a theoretical future implementation,
+    // ensuring we do NOT clear authentication tokens.
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("cart")
+      document.cookie = "cart=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+    }
+
     setLoading(false)
     onClose()
 
