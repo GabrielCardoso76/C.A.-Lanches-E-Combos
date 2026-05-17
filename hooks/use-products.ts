@@ -4,10 +4,12 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { menuData } from "@/lib/menu-data"
 import type { MenuItem } from "@/components/cart-context"
+import { isStoreCurrentlyOpen } from "@/lib/business-hours"
 
 export function useProducts() {
   const [products, setProducts] = useState<MenuItem[]>([])
   const [storeOpen, setStoreOpen] = useState(true)
+  const [nextOpenMessage, setNextOpenMessage] = useState("")
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -33,9 +35,15 @@ export function useProducts() {
         }
 
         // Fetch settings
-        const { data: settingsData } = await supabase.from("settings").select("is_open").eq("id", 1).single()
+        const { data: settingsData } = await supabase.from("settings").select("is_open, schedule").eq("id", 1).single()
         if (settingsData) {
-          setStoreOpen(settingsData.is_open)
+          if (settingsData.schedule) {
+            const { isOpen, nextOpenMessage } = isStoreCurrentlyOpen(settingsData.schedule)
+            setStoreOpen(isOpen)
+            setNextOpenMessage(nextOpenMessage)
+          } else {
+            setStoreOpen(settingsData.is_open)
+          }
         }
 
       } catch (err) {
@@ -49,5 +57,5 @@ export function useProducts() {
     fetchData()
   }, [])
 
-  return { products, storeOpen, loading }
+  return { products, storeOpen, nextOpenMessage, loading }
 }

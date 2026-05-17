@@ -9,6 +9,7 @@ import Image from "next/image"
 import { supabase } from "@/lib/supabase"
 import { categories } from "@/lib/menu-data"
 import { Switch } from "@/components/ui/switch"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function AdminPage() {
   const { products, loading } = useProducts()
@@ -70,7 +71,17 @@ export default function AdminPage() {
   }
 
   if (loading) {
-    return <div className="min-h-[50vh] flex items-center justify-center">Carregando produtos...</div>
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-6 md:py-8 space-y-6">
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-12 w-full max-w-sm rounded-lg" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <Skeleton key={i} className="h-64 w-full rounded-xl" />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   // Apply filters
@@ -95,7 +106,7 @@ export default function AdminPage() {
               <div>
                 <h2 className="font-bold text-lg leading-none mb-1">Status da Loja</h2>
                 <p className="text-sm text-muted-foreground leading-none">
-                  {isLoadingStoreStatus ? "Carregando..." : (isOpenStore ? "Aberto para pedidos" : "Fechado no momento")}
+                  {isLoadingStoreStatus ? <Skeleton className="h-4 w-32" /> : (isOpenStore ? "Aberto para pedidos" : "Fechado no momento")}
                 </p>
               </div>
             </div>

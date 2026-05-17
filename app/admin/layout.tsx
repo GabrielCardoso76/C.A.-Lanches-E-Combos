@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import Cookies from "js-cookie"
 import { LogOut, Menu, X, Store } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { isStoreCurrentlyOpen } from "@/lib/business-hours"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -21,12 +22,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     async function fetchSettings() {
       if (!supabase) return
-      const { data } = await supabase.from("settings").select("is_open").eq("id", 1).single()
+      const { data } = await supabase.from("settings").select("is_open, schedule").eq("id", 1).single()
       if (data) {
-        setStoreOpen(data.is_open)
+        if (data.schedule) {
+          const { isOpen } = isStoreCurrentlyOpen(data.schedule)
+          setStoreOpen(isOpen)
+        } else {
+          setStoreOpen(data.is_open)
+        }
       }
     }
     fetchSettings()
+
+    // Keep-alive ping for Render
+    const pingInterval = setInterval(() => {
+      fetch("/api/ping").catch(console.error)
+    }, 180000) // 3 minutes
+
+    return () => clearInterval(pingInterval)
   }, [])
 
   const toggleStoreStatus = async () => {
@@ -70,15 +83,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <div className="p-4 border-b border-border bg-muted/30">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Store size={18} className={storeOpen ? "text-green-500" : "text-destructive"} />
-              <span className="font-bold text-sm">Loja {storeOpen ? "Aberta" : "Fechada"}</span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Store size={18} className={storeOpen ? "text-green-500" : "text-destructive"} />
+                <span className="font-bold text-sm">Loja {storeOpen ? "Aberta" : "Fechada"}</span>
+              </div>
+              {/* Manual toggle is hidden because schedule is automatic now. It can be fully removed or kept as force override. Hiding for now to avoid confusion. */}
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" checked={storeOpen} onChange={toggleStoreStatus} />
-              <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-            </label>
+            <p className="text-xs text-muted-foreground">O status da loja é atualizado automaticamente conforme os horários configurados.</p>
           </div>
         </div>
 

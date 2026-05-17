@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { User } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface Profile {
   id: string
@@ -42,7 +43,11 @@ export default function CustomersPage() {
 
         <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center text-muted-foreground">Carregando clientes...</div>
+            <div className="p-4 space-y-4">
+              <Skeleton className="h-20 w-full rounded-lg" />
+              <Skeleton className="h-20 w-full rounded-lg" />
+              <Skeleton className="h-20 w-full rounded-lg" />
+            </div>
           ) : customers.length === 0 ? (
             <div className="p-12 text-center flex flex-col items-center">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
