@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useProducts } from "@/hooks/use-products"
 import { ProductForm } from "@/components/admin/product-form"
 import type { MenuItem } from "@/components/cart-context"
-import { Plus, Pencil, Trash2, Filter, X } from "lucide-react"
+import { Plus, Pencil, Trash2, Filter, X, Store } from "lucide-react"
 import Image from "next/image"
 import { supabase } from "@/lib/supabase"
 import { categories } from "@/lib/menu-data"
+import { Switch } from "@/components/ui/switch"
 
 export default function AdminPage() {
   const { products, loading } = useProducts()
@@ -22,6 +23,36 @@ export default function AdminPage() {
   const [filterFeatured, setFilterFeatured] = useState<boolean>(false)
   const [filterBestSeller, setFilterBestSeller] = useState<boolean>(false)
   const [showFilters, setShowFilters] = useState(false)
+
+  // Store status state
+  const [isOpenStore, setIsOpenStore] = useState(true)
+  const [isLoadingStoreStatus, setIsLoadingStoreStatus] = useState(true)
+
+  useEffect(() => {
+    async function fetchStoreStatus() {
+      if (!supabase) return
+      setIsLoadingStoreStatus(true)
+      const { data, error } = await supabase.from("settings").select("is_open").eq("id", 1).single()
+      if (!error && data) {
+        setIsOpenStore(data.is_open)
+      }
+      setIsLoadingStoreStatus(false)
+    }
+    fetchStoreStatus()
+  }, [])
+
+  const toggleStoreStatus = async () => {
+    if (!supabase) return
+    const newStatus = !isOpenStore
+    setIsOpenStore(newStatus)
+    try {
+      await supabase.from("settings").update({ is_open: newStatus }).eq("id", 1)
+    } catch (error) {
+      console.error("Error updating store status:", error)
+      setIsOpenStore(!newStatus) // revert on error
+      alert("Erro ao atualizar o status da loja.")
+    }
+  }
 
   const handleDelete = async () => {
     if (!deletingProduct || !supabase) return
@@ -53,6 +84,29 @@ export default function AdminPage() {
   return (
     <div className="pb-20">
       <main className="max-w-4xl mx-auto px-4 py-6 md:py-8">
+
+        {/* Store Status Toggle Section */}
+        {!isAdding && !editingProduct && (
+          <div className="mb-8 p-4 bg-card border border-border rounded-xl flex items-center justify-between shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-full ${isOpenStore ? 'bg-green-100 text-green-700' : 'bg-destructive/10 text-destructive'}`}>
+                <Store size={24} />
+              </div>
+              <div>
+                <h2 className="font-bold text-lg leading-none mb-1">Status da Loja</h2>
+                <p className="text-sm text-muted-foreground leading-none">
+                  {isLoadingStoreStatus ? "Carregando..." : (isOpenStore ? "Aberto para pedidos" : "Fechado no momento")}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={isOpenStore}
+              onCheckedChange={toggleStoreStatus}
+              disabled={isLoadingStoreStatus}
+            />
+          </div>
+        )}
+
         {isAdding || editingProduct ? (
           <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <h2 className="text-lg font-bold mb-4">
