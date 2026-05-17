@@ -17,6 +17,7 @@ export interface MenuItem {
 
 export interface CartItem extends MenuItem {
   quantity: number
+  observations?: string
 }
 
 interface CartContextType {
@@ -24,6 +25,7 @@ interface CartContextType {
   addItem: (item: MenuItem) => void
   removeItem: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
+  updateObservations: (id: string, observations: string) => void
   clearCart: () => void
   totalItems: number
   totalPrice: number
@@ -60,6 +62,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  const updateObservations = useCallback((id: string, observations: string) => {
+    setItems((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, observations } : i))
+    )
+  }, [])
+
   const clearCart = useCallback(() => {
     setItems([])
   }, [])
@@ -69,7 +77,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice }}
+      value={{ items, addItem, removeItem, updateQuantity, updateObservations, clearCart, totalItems, totalPrice }}
     >
       {children}
     </CartContext.Provider>
