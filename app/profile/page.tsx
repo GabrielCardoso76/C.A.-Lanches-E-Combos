@@ -4,8 +4,11 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { LogOut, Home, KeyRound, Plus, Trash2, MapPin, ArrowLeft, Eye, EyeOff, ShoppingBag, Clock } from "lucide-react"
+import { ArrowLeft, KeyRound, MapPin, Package, Clock, Eye, EyeOff, Plus, Trash2, Home, LogOut, ShoppingBag, Loader2, Check, ChevronsUpDown } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 interface Neighborhood {
   id: string
@@ -31,6 +34,7 @@ export default function ProfilePage() {
   // Passwords
   const [newPassword, setNewPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [comboboxOpen, setComboboxOpen] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
 
   // Addresses
@@ -341,9 +345,65 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-muted-foreground mb-1">Bairro *</label>
-                  <select required value={addressForm.neighborhood_id} onChange={e => setAddressForm({...addressForm, neighborhood_id: e.target.value})} className="w-full border border-input rounded-lg p-2 text-sm bg-background">
-                    {neighborhoods.map(n => <option key={n.id} value={n.id}>{n.name} (Taxa: R$ {n.delivery_fee.toFixed(2)})</option>)}
-                  </select>
+                  <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className={cn(
+                          "w-full flex justify-between items-center border border-input rounded-lg p-2 text-sm bg-background",
+                          !addressForm.neighborhood_id && "text-muted-foreground"
+                        )}
+                      >
+                        <span className="truncate flex-1 text-left">
+                          {addressForm.neighborhood_id
+                            ? (() => {
+                                const n = neighborhoods.find(n => n.id === addressForm.neighborhood_id);
+                                return n ? `${n.name} (Taxa: R$ ${n.delivery_fee.toFixed(2)})` : "Selecione um bairro...";
+                              })()
+                            : "Selecione um bairro..."}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Pesquisar bairro..." className="h-9 text-sm" />
+                        <CommandList>
+                          <CommandEmpty>Nenhum bairro encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            {neighborhoods.map(n => (
+                              <CommandItem
+                                key={n.id}
+                                value={n.name}
+                                onSelect={() => {
+                                  setAddressForm({ ...addressForm, neighborhood_id: n.id })
+                                  setComboboxOpen(false)
+                                }}
+                                className="text-sm cursor-pointer"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    addressForm.neighborhood_id === n.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {n.name} (Taxa: R$ {n.delivery_fee.toFixed(2)})
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {/* Visually hidden but focusable input to ensure required validation works properly without silent failures */}
+                  <input
+                    type="text"
+                    required
+                    className="absolute opacity-0 -z-10 w-0 h-0"
+                    value={addressForm.neighborhood_id}
+                    onChange={() => {}}
+                    tabIndex={-1}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-muted-foreground mb-1">Complemento</label>
