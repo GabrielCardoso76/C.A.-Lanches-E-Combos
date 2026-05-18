@@ -1,9 +1,5 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase-admin"
 import { User } from "lucide-react"
-import { Skeleton } from "@/components/ui/skeleton"
 
 interface Profile {
   id: string
@@ -12,29 +8,21 @@ interface Profile {
   created_at: string
 }
 
-export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Profile[]>([])
-  const [loading, setLoading] = useState(true)
+export const revalidate = 0 // Disable cache to always fetch latest customers
 
-  useEffect(() => {
-    async function fetchCustomers() {
-      if (!supabase) {
-        setLoading(false)
-        return
-      }
+export default async function CustomersPage() {
+  let customers: Profile[] = []
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false })
+  if (supabaseAdmin) {
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false })
 
-      if (!error && data) {
-        setCustomers(data)
-      }
-      setLoading(false)
+    if (!error && data) {
+      customers = data
     }
-    fetchCustomers()
-  }, [])
+  }
 
   return (
     <div className="pb-20">
@@ -42,13 +30,7 @@ export default function CustomersPage() {
         <h2 className="text-2xl font-black text-foreground mb-6">Clientes Cadastrados</h2>
 
         <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="p-4 space-y-4">
-              <Skeleton className="h-20 w-full rounded-lg" />
-              <Skeleton className="h-20 w-full rounded-lg" />
-              <Skeleton className="h-20 w-full rounded-lg" />
-            </div>
-          ) : customers.length === 0 ? (
+          {customers.length === 0 ? (
             <div className="p-12 text-center flex flex-col items-center">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                 <User size={32} className="text-muted-foreground" />
@@ -67,7 +49,7 @@ export default function CustomersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {customers.map(c => (
+                  {customers.map((c) => (
                     <tr key={c.id} className="hover:bg-muted/30 transition-colors">
                       <td className="p-4 font-medium text-foreground">{c.full_name}</td>
                       <td className="p-4 text-muted-foreground">{c.email}</td>
